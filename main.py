@@ -2,15 +2,19 @@ from game.config import GameConfig
 from game.core import SurvivalGame
 from game.agents import NeuralNetworkAgent
 from batfly_algo import BatFlyAlgorithm
+from test_trained_agent import test_agent
 
 import numpy as np
 import time
+import os
+
+import matplotlib.pyplot as plt
 
 NUM_PLAYERS      = 30            # Número de agentes que irão jogar o jogo
 NUM_PLAYED_GAMES = 3             # Quantidade de vezes que cada agente irá jogar o jogo
 MAX_TIME         = 12 * 60 * 60  # 12 horas em segundos
 MAX_ITER         = 1000          # Máximo de iterações do algoritmo
-FPS              = 200           # Quantidade de fps do jogo
+FPS              = 1000          # Quantidade de fps do jogo
 
 POPULATION_SIZE = 100
 GENE_LENGTH = 27*32 + 32 + 32*16 + 16 + 16*3 + 3  # = 1475
@@ -19,7 +23,7 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
     if population.ndim == 1:
         population = np.expand_dims(population, axis=0)
     
-    game_config = GameConfig(num_players=len(population), fps=200)         # Configurações do jogo
+    game_config = GameConfig(num_players=len(population), fps=FPS)
     agents = [
         NeuralNetworkAgent(
             config=game_config,
@@ -28,13 +32,12 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
     ]  # Criando 30 agentes para jogar o jogo
     
     total_scores = np.zeros(len(agents)) # Array com os scores de cada agente
-    start = time.time()          # Definindo o início do cronometro
     
     for _ in range(NUM_PLAYED_GAMES):
         # Criando o jogo
         game = SurvivalGame(config=game_config, render=False)
         
-        while not game.all_players_dead() and time.time()-start <= MAX_TIME:
+        while not game.all_players_dead():
             # Próximas ações que cada um dos agentes irá tomar
             actions = []
             
@@ -59,6 +62,18 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
     
     return avg_scores
 
+def plot_scores_curve(best_scores):
+    os.makedirs("figs", exist_ok=True)
+    
+    iterations, best_scores = enumerate(best_scores)
+    
+    plt.plot(iterations, best_scores)
+    plt.xlabel("Iteração")
+    plt.ylabel("Pontuação")
+    plt.title("Melhores pontuações dos agentes vs Iterações do algoritmo")
+    
+    plt.savefig(os.path.join("figs", "scores_curve.png"), format=".png")
+
 def main():
     print("\n--- Iniciando Treinamento com Algoritmo Voo dos Morcegos ---")
     
@@ -69,6 +84,10 @@ def main():
     
     best_weights_overall = None
     best_fitness_overall = -np.inf
+    
+    bests_scores = []
+    
+    start = time.time()
 
     for generation in range(MAX_ITER):
         start_generation = time.time()
@@ -82,7 +101,14 @@ def main():
         
         end = time.time()
         print(f"{generation + 1}/{MAX_ITER} Best Fitness: {current_best_fitness.item():.2f} Melhor Fitness Geral: {best_fitness_overall.item():.2f} ({end-start_generation:.2f} s)")
+        
+        bests_scores.append(current_best_fitness)
+        
+        if time.time() - start <= MAX_TIME:
+            print("\n ### TIME OUT DE 12 HORAS - FINALIZANDO ITERAÇÕES DO ALGORITMO ###")
+            break
    
+    plot_scores_curve(best_scores=bests_scores)
     
     print("\n--- Treinamento Concluído ---")
     print(f"Melhor Fitness Geral Alcançado: {best_fitness_overall.item():.2f}")
@@ -90,6 +116,8 @@ def main():
     if best_weights_overall is not None:
         np.save("best_weights.npy", best_weights_overall)
         print("Melhores pesos salvos em \'best_weights.npy\'")
+        
+        test_agent(weights=best_weights_overall)
     else:
         print("Nenhum peso ótimo encontrado.")
 

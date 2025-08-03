@@ -6,9 +6,14 @@ class BatFlyAlgorithm:
     """
     
     def __init__(self, 
-                 population_size: int, gene_length: int, f_min: float = 0.0, 
-                 f_max: float = 2.0, alpha: float = 0.9, gamma: float = 0.9, 
-                 loudness_init: float = 1.0, pulse_rate_init: float = 0.5):
+                 population_size: int, 
+                 gene_length: int, 
+                 f_min: float = 0.0, 
+                 f_max: float = 2.0, 
+                 alpha: float = 0.9, 
+                 gamma: float = 0.9, 
+                 loudness_init: float = 1.0, 
+                 pulse_rate_init: float = 0.5):
         
         self.population_size = population_size
         self.gene_length = gene_length
@@ -47,8 +52,8 @@ class BatFlyAlgorithm:
             fitness_scores = np.array([fitness_function(ind) for ind in self.population])
 
         best_idx = np.argmax(fitness_scores)
-        if best_idx >= 0:
-            self.best = self.population[best_idx].copy()
+        self.best = self.population[best_idx].copy()
+        best_score = fitness_scores[best_idx]
 
         new_population = []
 
@@ -59,18 +64,17 @@ class BatFlyAlgorithm:
                 new_solution = self.population[i].copy()
 
             new_fitness = fitness_function(np.array([new_solution]))[0]
-            current_fitness = fitness_function(np.array([self.population[i]]))[0]
 
-            if (np.random.rand() < self.A[i]) and (new_fitness > current_fitness):
+            if (np.random.rand() < self.A[i]) and (new_fitness > fitness_scores[i]):
                 self.population[i] = new_solution
                 self.A[i] *= self.alpha
-                self.r[i] = self.r[i] * (1 - np.exp(-self.gamma))
+                self.r[i] *= (1 - np.exp(-self.gamma))
 
             new_population.append(self.population[i])
 
         self.population = np.array(new_population)
 
-        return self.best, fitness_function(self.best)
+        return self.best, best_score
 
     def get_population(self) -> np.ndarray:
         return self.population
