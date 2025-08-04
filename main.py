@@ -122,6 +122,9 @@ def main():
         
         test_agent(weights=best_weights_overall)
         plot_scores_curve(best_scores=bests_scores)
+        
+        np.save("best_scores_per_iter.npy", np.array(bests_scores))
+        print("Melhores scores por iteração salvos em \'best_scores_per_iter.npy\'")
     else:
         print("Nenhum peso ótimo encontrado.")
 

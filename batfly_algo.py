@@ -2,7 +2,7 @@ import numpy as np
 
 class BatFlyAlgorithm:
     """
-    Classe para a meta-heurística do voo dos morcegos
+    Classe para realizar a meta-heurística do voo dos morcegos
     """
     
     def __init__(self, 

@@ -52,20 +52,18 @@ class NeuralNetworkAgent(Agent):
         self.w3, self.b3 = extract_weights(self.hidden2_size, self.output_size)
 
     def predict(self, state: np.ndarray) -> int:
-        # Rede neural com 3 camadas totalmente conectadas
         def tanh(x):
             return np.tanh(x)
 
         def softmax(x):
-            e_x = np.exp(x - np.max(x))
+            e_x = np.exp(np.clip(x - np.max(x), -50, 50))  # estabilidade numérica
             return e_x / np.sum(e_x)
 
-        x = state  # entrada do estado já como vetor 1D
+        x = state.astype(np.float32)
+        x = (x - np.mean(x)) / (np.std(x) + 1e-8)
 
-        # Forward pass
         h1 = tanh(np.dot(x, self.w1) + self.b1)
         h2 = tanh(np.dot(h1, self.w2) + self.b2)
         out = softmax(np.dot(h2, self.w3) + self.b3)
 
-        action = int(np.argmax(out))
-        return action
+        return int(np.argmax(out))
