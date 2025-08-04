@@ -10,14 +10,19 @@ import os
 
 import matplotlib.pyplot as plt
 
-NUM_PLAYERS      = 30            # Número de agentes que irão jogar o jogo
 NUM_PLAYED_GAMES = 3             # Quantidade de vezes que cada agente irá jogar o jogo
 MAX_TIME         = 12 * 60 * 60  # 12 horas em segundos
 MAX_ITER         = 1000          # Máximo de iterações do algoritmo
 FPS              = 1000          # Quantidade de fps do jogo
 
 POPULATION_SIZE = 100
-GENE_LENGTH = 27*32 + 32 + 32*16 + 16 + 16*3 + 3  # = 1475
+
+INPUT_SIZE = 27
+HIDDEN1_SIZE = 32
+HIDDEN2_SIZE = 16
+OUTPUT_SIZE = 3
+
+GENE_LENGTH = INPUT_SIZE*HIDDEN1_SIZE + HIDDEN1_SIZE + HIDDEN1_SIZE*HIDDEN2_SIZE + HIDDEN2_SIZE + HIDDEN2_SIZE*OUTPUT_SIZE + OUTPUT_SIZE  # = 1475
 
 def game_fitness_function(population : np.ndarray) -> np.ndarray:
     if population.ndim == 1:
@@ -65,14 +70,14 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
 def plot_scores_curve(best_scores):
     os.makedirs("figs", exist_ok=True)
     
-    iterations, best_scores = enumerate(best_scores)
+    iterations = [i+1 for i in range(len(best_scores))]
     
     plt.plot(iterations, best_scores)
     plt.xlabel("Iteração")
     plt.ylabel("Pontuação")
-    plt.title("Melhores pontuações dos agentes vs Iterações do algoritmo")
+    plt.title("Melhores Pontuações dos Agentes vs Iterações do Algoritmo")
     
-    plt.savefig(os.path.join("figs", "scores_curve.png"), format=".png")
+    plt.savefig(os.path.join("figs", "scores_curve.png"), format="png")
 
 def main():
     print("\n--- Iniciando Treinamento com Algoritmo Voo dos Morcegos ---")
@@ -104,11 +109,9 @@ def main():
         
         bests_scores.append(current_best_fitness)
         
-        if time.time() - start <= MAX_TIME:
+        if time.time() - start > MAX_TIME:
             print("\n ### TIME OUT DE 12 HORAS - FINALIZANDO ITERAÇÕES DO ALGORITMO ###")
             break
-   
-    plot_scores_curve(best_scores=bests_scores)
     
     print("\n--- Treinamento Concluído ---")
     print(f"Melhor Fitness Geral Alcançado: {best_fitness_overall.item():.2f}")
@@ -118,6 +121,7 @@ def main():
         print("Melhores pesos salvos em \'best_weights.npy\'")
         
         test_agent(weights=best_weights_overall)
+        plot_scores_curve(best_scores=bests_scores)
     else:
         print("Nenhum peso ótimo encontrado.")
 
