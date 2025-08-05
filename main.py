@@ -14,6 +14,7 @@ NUM_PLAYED_GAMES = 3             # Quantidade de vezes que cada agente irá joga
 MAX_TIME         = 12 * 60 * 60  # 12 horas em segundos
 MAX_ITER         = 1000          # Máximo de iterações do algoritmo
 FPS              = 1000          # Quantidade de fps do jogo
+RENDER           = False
 
 POPULATION_SIZE = 100
 
@@ -29,18 +30,13 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
         population = np.expand_dims(population, axis=0)
     
     game_config = GameConfig(num_players=len(population), fps=FPS)
-    agents = [
-        NeuralNetworkAgent(
-            config=game_config,
-            gene_vector=individual
-        ) for individual in population
-    ]  # Criando 30 agentes para jogar o jogo
+    agents = [NeuralNetworkAgent(gene_vector=individual) for individual in population]  # Criando 30 agentes para jogar o jogo
     
     total_scores = np.zeros(len(agents)) # Array com os scores de cada agente
     
     for _ in range(NUM_PLAYED_GAMES):
         # Criando o jogo
-        game = SurvivalGame(config=game_config, render=False)
+        game = SurvivalGame(config=game_config, render=RENDER)
         
         while not game.all_players_dead():
             # Próximas ações que cada um dos agentes irá tomar

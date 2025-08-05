@@ -23,12 +23,17 @@ class HumanAgent(Agent):
         return 0  # Padrão: não fazer nada (será sobrescrito pela entrada do usuário no manual_play.py)
 
 class NeuralNetworkAgent(Agent):
-    def __init__(self, config: GameConfig, gene_vector: np.ndarray):
-        self.config = config
-        self.input_size = config.sensor_grid_size * config.sensor_grid_size + 2  # incluindo variáveis internas
-        self.hidden1_size = 32
-        self.hidden2_size = 16
-        self.output_size = 3  # ações: noop, cima, baixo
+    """
+    Agente baseado em rede neural para jogar o jogo
+
+    Args:
+        Agent (_type_): Herda da classe Agent
+    """
+    def __init__(self, gene_vector: np.ndarray, input_layer : int = 27, hidden1_layer : int = 32, hidden2_layer : int = 16, output_layer : int = 3):
+        self.input_size = input_layer
+        self.hidden1_size = hidden1_layer
+        self.hidden2_size = hidden2_layer
+        self.output_size = output_layer  # ações: noop, cima, baixo
 
         # Descompacta o vetor de genes em pesos e bias
         self._unpack_genes(gene_vector)
