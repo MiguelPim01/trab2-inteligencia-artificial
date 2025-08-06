@@ -83,31 +83,7 @@ def main():
         gene_length=GENE_LENGTH
     )
     
-    best_weights_overall = None
-    best_fitness_overall = -np.inf
-    
-    bests_scores = []
-    
-    start = time.time()
-
-    for generation in range(MAX_ITER):
-        start_generation = time.time()
-        current_best_weights, current_best_fitness  = bfa.evolve(game_fitness_function, parallel=True)
-
-        if current_best_fitness > best_fitness_overall:
-            best_fitness_overall = current_best_fitness
-            best_weights_overall = current_best_weights
-            print(f'Backup generation -> Melhor Fitness Geral: {best_fitness_overall.item():.2f}')
-            np.save("best_weights.npy", best_weights_overall)
-        
-        end = time.time()
-        print(f"{generation + 1}/{MAX_ITER} Best Fitness: {current_best_fitness.item():.2f} Melhor Fitness Geral: {best_fitness_overall.item():.2f} ({end-start_generation:.2f} s)")
-        
-        bests_scores.append(current_best_fitness)
-        
-        if time.time() - start > MAX_TIME:
-            print("\n ### TIME OUT DE 12 HORAS - FINALIZANDO ITERAÇÕES DO ALGORITMO ###")
-            break
+    best_weights_overall, best_fitness_overall, bests_scores = bfa.run_algorithm(game_fitness_function=game_fitness_function)
     
     print("\n--- Treinamento Concluído ---")
     print(f"Melhor Fitness Geral Alcançado: {best_fitness_overall.item():.2f}")

@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class BatFlyAlgorithm:
     """
@@ -11,22 +12,33 @@ class BatFlyAlgorithm:
                  f_min: float = 0.0, 
                  f_max: float = 2.0, 
                  alpha: float = 0.9, 
-                 gamma: float = 0.9, 
-                 loudness_init: float = 1.0, 
-                 pulse_rate_init: float = 0.5):
+                 gamma: float = 0.9):
         
+        # Tamanhos e constantes
         self.population_size = population_size
-        self.gene_length = gene_length
-        self.f_min = f_min
-        self.f_max = f_max
-        self.alpha = alpha
-        self.gamma = gamma
-        self.A = np.full(population_size, loudness_init)    # Loudness
-        self.r = np.full(population_size, pulse_rate_init)  # Pulse rate
-        self.frequencies = np.zeros(population_size)
+        self.gene_length     = gene_length
+        self.f_min           = f_min # 0
+        self.f_max           = f_max # 2
+        self.alpha           = alpha # 0.9 como define o artigo
+        self.gamma           = gamma # 0.9 como define o artigo
+        
+        # Loudness e Pulse rate
+        self.A = np.random.uniform(1.0, 2.0, population_size)  # Loudness inicial [1, 2]
+        self.r = np.random.uniform(0.0, 1.0, population_size)  # Pulse rate inicial [0, 1]
+        
+        # Frequências iniciais
+        self.frequencies = np.random.uniform(f_min, f_max, population_size)
+        
+        # Velocidades iniciais
         self.velocities = np.zeros((population_size, gene_length))
+        
+        # População inicial
         self.population = self._inicialize_bat_population()
+        
+        # Inicializando o melhor conjunto de pesos, a iteração e os valores iniciais de pulse rate
         self.best = self.population[0].copy()
+        self.iteration = 0
+        self.r0 = np.copy(self.r)
     
     def _inicialize_bat_population(self) -> np.ndarray:
         return np.random.uniform(-1, 1, (self.population_size, self.gene_length))
@@ -36,46 +48,102 @@ class BatFlyAlgorithm:
         self.frequencies = self.f_min + (self.f_max - self.f_min) * beta
     
     def _move_bats(self):
+        # Atualizando frequências (Equação 2)
         self._update_frequencies()
         freq = self.frequencies[:, np.newaxis]  # shape (N, 1)
+        
+        # Atualizando velocidade (Equação 3)
         self.velocities += (self.population - self.best) * freq
+        
+        # Definindo limite para a velocidade do morcego
+        max_velocity = 50
+        self.velocities = np.clip(self.velocities, -max_velocity, max_velocity)
+        
+        # Atualizando posições dos morcegos (Equação 4)
         self.population += self.velocities
+        self.population = np.clip(self.population, -100, 100)
     
-    def _local_search(self, i: int) -> np.ndarray:
+    def _local_search(self) -> np.ndarray:
         epsilon = np.random.uniform(-1, 1, self.gene_length)
-        return self.population[i] + epsilon * np.mean(self.A)
+        return self.best + (epsilon*np.mean(self.A))
     
     def evolve(self, fitness_function, parallel=False) -> tuple[np.ndarray, float]:
+        # Primeiro, iremos pegar os resultados de cada um dos individuos da população
         if parallel:
             fitness_scores = np.array(fitness_function(self.population))
         else:
             fitness_scores = np.array([fitness_function(ind) for ind in self.population])
 
+        # Extraindo o indivíduo com o melhor desempenho médio da população
         best_idx = np.argmax(fitness_scores)
-        self.best = self.population[best_idx].copy()
-        best_score = fitness_scores[best_idx]
+        
+        self.best = self.population[best_idx].copy()    # Melhores pesos
+        best_fitness = fitness_scores[best_idx]         # Melhor score
+        
+        # Movendo os morcegos
+        self._move_bats()
 
-        new_population = []
-
+        # Atualizando população
         for i in range(self.population_size):
+            
+            # Obtendo a novo indivíduo da população
             if np.random.rand() > self.r[i]:
-                new_solution = self._local_search(i)
+                new_solution = self._local_search()
             else:
                 new_solution = self.population[i].copy()
 
+            # Obtendo a pontuação do novo indíviduo
             new_fitness = fitness_function(np.array([new_solution]))[0]
 
+            # Verificando se a nova solução será aceita ou não
             if (np.random.rand() < self.A[i]) and (new_fitness > fitness_scores[i]):
-                self.population[i] = new_solution
-                self.A[i] *= self.alpha
-                self.r[i] *= (1 - np.exp(-self.gamma))
+                self.population[i]  = new_solution
+                self.A[i]          *= self.alpha
+                self.r[i]           = self.r0[i] * (1 - np.exp(-self.gamma*self.iteration))
+                
+                if new_fitness > best_fitness:
+                    self.best = new_solution.copy()
+                    best_fitness = new_fitness
 
-            new_population.append(self.population[i])
+        return self.best, best_fitness
+    
+    def run_algorithm(self, game_fitness_function, max_iter : int = 1000, max_time : int = 12*60*60) -> tuple[np.ndarray, np.ndarray]:
+        # Inicializando variáveis
+        best_weights_overall = None
+        best_fitness_overall = -np.inf
+        bests_scores = []
+        start = time.time()
 
-        self.population = np.array(new_population)
+        for generation in range(max_iter):
+            # Atualizando iteração e tempo
+            self.iteration   = generation + 1
+            start_generation = time.time()
+            
+            # Obtendo o melhor conjunto de pesos e o score relacionado a esse peso
+            current_best_weights, current_best_fitness  = self.evolve(game_fitness_function, parallel=True)
+            
+            # Atualizando a lista de melhores scores a cada iteração
+            bests_scores.append(current_best_fitness)
 
-        return self.best, best_score
-
+            if current_best_fitness > best_fitness_overall:
+                # Atualizando novos melhores pesos
+                best_fitness_overall = current_best_fitness
+                best_weights_overall = current_best_weights
+                print(f'Backup generation -> Melhor Fitness Geral: {best_fitness_overall.item():.2f}')
+                
+                # Salvando os melhores pesos
+                np.save("best_weights.npy", best_weights_overall)
+            
+            end = time.time()
+            print(f"[{generation + 1}/{max_iter}] Iterations --> Best Fitness: {current_best_fitness.item():.2f}, Melhor Fitness Geral: {best_fitness_overall.item():.2f} ({end-start_generation:.2f} s | tempo total: {(time.time()-start)/3600:.2f} h) ------ Média Loudness: {np.mean(self.A)}")
+            
+            # Verificando se chegou ao limite de tempo do algoritmo
+            if time.time() - start > max_time:
+                print("\n ### TIME OUT DE 12 HORAS - FINALIZANDO ITERAÇÕES DO ALGORITMO ###")
+                break
+        
+        return best_weights_overall, best_fitness_overall, bests_scores
+    
     def get_population(self) -> np.ndarray:
         return self.population
 
