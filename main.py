@@ -7,11 +7,11 @@ from test_trained_agent import test_agent
 import numpy as np
 import time
 import os
+from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 
-NUM_PLAYED_GAMES = 3             # Quantidade de vezes que cada agente irá jogar o jogo
-MAX_TIME         = 12 * 60 * 60  # 12 horas em segundos
+NUM_GAMES = 3             # Quantidade de vezes que cada agente irá jogar o jogo
 MAX_ITER         = 1000          # Máximo de iterações do algoritmo
 FPS              = 1000          # Quantidade de fps do jogo
 RENDER           = False
@@ -23,18 +23,26 @@ HIDDEN1_SIZE = 32
 HIDDEN2_SIZE = 16
 OUTPUT_SIZE = 3
 
-GENE_LENGTH = INPUT_SIZE*HIDDEN1_SIZE + HIDDEN1_SIZE + HIDDEN1_SIZE*HIDDEN2_SIZE + HIDDEN2_SIZE + HIDDEN2_SIZE*OUTPUT_SIZE + OUTPUT_SIZE  # = 1475
+DIMESION = INPUT_SIZE*HIDDEN1_SIZE + HIDDEN1_SIZE + HIDDEN1_SIZE*HIDDEN2_SIZE + HIDDEN2_SIZE + HIDDEN2_SIZE*OUTPUT_SIZE + OUTPUT_SIZE  # = 1475
 
 def game_fitness_function(population : np.ndarray) -> np.ndarray:
+    """Joga o jogo 3 vezes para cada individuo da população
+
+    Args:
+        population (np.ndarray): Matriz de pesos
+
+    Returns:
+        avg_scores (np.ndarray): Pontuação média de cada agente para aquele conjunto de pesos
+    """
     if population.ndim == 1:
         population = np.expand_dims(population, axis=0)
     
     game_config = GameConfig(num_players=len(population), fps=FPS)
-    agents = [NeuralNetworkAgent(gene_vector=individual) for individual in population]  # Criando 30 agentes para jogar o jogo
+    agents = [NeuralNetworkAgent(weight_vector=individual) for individual in population]  # Criando 30 agentes para jogar o jogo
     
     total_scores = np.zeros(len(agents)) # Array com os scores de cada agente
     
-    for _ in range(NUM_PLAYED_GAMES):
+    for _ in range(NUM_GAMES):
         # Criando o jogo
         game = SurvivalGame(config=game_config, render=RENDER)
         
@@ -63,7 +71,12 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
     
     return avg_scores
 
-def plot_scores_curve(best_scores):
+def plot_scores_curve(best_scores : list):
+    """Cria um plot dos melhores scores alcançados vs iteração do algoritmo
+
+    Args:
+        best_scores (list): Vetor de scores do algoritmo
+    """
     os.makedirs("figs", exist_ok=True)
     
     iterations = [i+1 for i in range(len(best_scores))]
@@ -75,30 +88,45 @@ def plot_scores_curve(best_scores):
     
     plt.savefig(os.path.join("figs", "scores_curve.png"), format="png")
 
-def main():
-    print("\n--- Iniciando Treinamento com Algoritmo Voo dos Morcegos ---")
+def parse_args():
+    parser = ArgumentParser()
     
-    bfa = BatFlyAlgorithm(
-        population_size=POPULATION_SIZE,
-        gene_length=GENE_LENGTH
+    parser.add_argument(
+        "--train-network", '-tn',
+        action='store_true',
+        help="Defines wether the algorithm will run or not"
     )
     
-    best_weights_overall, best_fitness_overall, bests_scores = bfa.run_algorithm(game_fitness_function=game_fitness_function)
-    
-    print("\n--- Treinamento Concluído ---")
-    print(f"Melhor Fitness Geral Alcançado: {best_fitness_overall.item():.2f}")
+    return parser.parse_args()
 
-    if best_weights_overall is not None:
-        np.save("best_weights.npy", best_weights_overall)
+def main():
+    args = parse_args()
+    
+    if args.train_network:
+        print("\n--- Iniciando Treinamento com Voo dos Morcegos ---")
+        
+        bat_algorithm = BatFlyAlgorithm(
+            population_size=POPULATION_SIZE,
+            d=DIMESION
+        )
+        
+        best_weights, scores_history = bat_algorithm.execute_algorithm(objective_function=game_fitness_function, total_iterations=MAX_ITER)
+        
+        print("--- Treinamento finalizado ---")
+        
+        np.save("best_weights.npy", best_weights)
         print("Melhores pesos salvos em \'best_weights.npy\'")
         
-        test_agent(weights=best_weights_overall)
-        plot_scores_curve(best_scores=bests_scores)
-        
-        np.save("best_scores_per_iter.npy", np.array(bests_scores))
-        print("Melhores scores por iteração salvos em \'best_scores_per_iter.npy\'")
-    else:
-        print("Nenhum peso ótimo encontrado.")
+        np.save("best_scores_per_iter.npy", np.array(scores_history))
+        print("Histórico de melhores scores salvos em \'best_scores_per_iter.npy\'")
+    
+    # Testando o agente
+    best_weights = np.load("best_weights.npy")
+    test_agent(weights=best_weights, num_tests=30, render=RENDER)
+    
+    # Plotando curva de scores vs iteração
+    scores_history = np.load("best_scores_per_iter.npy")
+    plot_scores_curve(best_scores=scores_history)
 
 if __name__ == "__main__":
     main()

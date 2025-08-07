@@ -13,7 +13,7 @@ def test_agent(weights: np.ndarray, num_tests: int = 30, render: bool = False):
 
     for i in range(num_tests):
         game = SurvivalGame(config=game_config, render=render)
-        agent = NeuralNetworkAgent(gene_vector=weights)
+        agent = NeuralNetworkAgent(weight_vector=weights)
         
         while not game.all_players_dead():
             state = game.get_state(0, include_internals=True)
