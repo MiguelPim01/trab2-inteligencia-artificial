@@ -39,15 +39,27 @@ class BatFlyAlgorithm:
         self.best = self.population[0].copy()
         self.iteration = 0
         self.r0 = np.copy(self.r)
+        self.A0 = np.copy(self.A)
     
     def _inicialize_bat_population(self) -> np.ndarray:
         return np.random.uniform(-1, 1, (self.population_size, self.gene_length))
     
     def _update_frequencies(self):
+        """
+        Faz o update das frequências.
+        """
+        
+        # Gerando n valores beta aleatórios para atualizar a frequência de todos os morcegos
         beta = np.random.rand(self.population_size)
+        
+        # Atualizando as frequências
         self.frequencies = self.f_min + (self.f_max - self.f_min) * beta
     
     def _move_bats(self):
+        """
+        Faz o update das frequências, das velocidades e posições dos morcegos.
+        """
+        
         # Atualizando frequências (Equação 2)
         self._update_frequencies()
         freq = self.frequencies[:, np.newaxis]  # shape (N, 1)
@@ -55,19 +67,28 @@ class BatFlyAlgorithm:
         # Atualizando velocidade (Equação 3)
         self.velocities += (self.population - self.best) * freq
         
-        # Definindo limite para a velocidade do morcego
-        max_velocity = 50
-        self.velocities = np.clip(self.velocities, -max_velocity, max_velocity)
-        
         # Atualizando posições dos morcegos (Equação 4)
         self.population += self.velocities
-        self.population = np.clip(self.population, -100, 100)
     
     def _local_search(self) -> np.ndarray:
+        """
+        Função responsável por gerar uma nova solução local próxima da melhor.
+
+        Returns:
+            new_solution (np.ndarray): Nova solução próxima a melhor.
+        """
+        # Gerando epsilon aleatório entre [-1, 1] para cada morcego
         epsilon = np.random.uniform(-1, 1, self.gene_length)
-        return self.best + (epsilon*np.mean(self.A))
+        
+        # Nova solução próxima ao melhor
+        new_solution = self.best + (epsilon*np.mean(self.A))
+        
+        return new_solution
     
     def evolve(self, fitness_function, parallel=False) -> tuple[np.ndarray, float]:
+        # Movendo os morcegos
+        self._move_bats()
+        
         # Primeiro, iremos pegar os resultados de cada um dos individuos da população
         if parallel:
             fitness_scores = np.array(fitness_function(self.population))
@@ -76,12 +97,8 @@ class BatFlyAlgorithm:
 
         # Extraindo o indivíduo com o melhor desempenho médio da população
         best_idx = np.argmax(fitness_scores)
-        
         self.best = self.population[best_idx].copy()    # Melhores pesos
         best_fitness = fitness_scores[best_idx]         # Melhor score
-        
-        # Movendo os morcegos
-        self._move_bats()
 
         # Atualizando população
         for i in range(self.population_size):
@@ -89,14 +106,13 @@ class BatFlyAlgorithm:
             # Obtendo a novo indivíduo da população
             if np.random.rand() > self.r[i]:
                 new_solution = self._local_search()
+                new_fitness = fitness_function(np.array([new_solution]))[0]
             else:
                 new_solution = self.population[i].copy()
-
-            # Obtendo a pontuação do novo indíviduo
-            new_fitness = fitness_function(np.array([new_solution]))[0]
-
+                new_fitness = fitness_scores[i]
+            
             # Verificando se a nova solução será aceita ou não
-            if (np.random.rand() < self.A[i]) and (new_fitness > fitness_scores[i]):
+            if (np.random.rand()*self.A0[i] < self.A[i]) and (new_fitness > fitness_scores[i]):
                 self.population[i]  = new_solution
                 self.A[i]          *= self.alpha
                 self.r[i]           = self.r0[i] * (1 - np.exp(-self.gamma*self.iteration))
@@ -107,7 +123,7 @@ class BatFlyAlgorithm:
 
         return self.best, best_fitness
     
-    def run_algorithm(self, game_fitness_function, max_iter : int = 1000, max_time : int = 12*60*60) -> tuple[np.ndarray, np.ndarray]:
+    def run_algorithm(self, game_fitness_function, max_iter : int = 1000, max_time : int = 12*60*60) -> tuple[np.ndarray, float, list]:
         # Inicializando variáveis
         best_weights_overall = None
         best_fitness_overall = -np.inf
@@ -135,7 +151,8 @@ class BatFlyAlgorithm:
                 np.save("best_weights.npy", best_weights_overall)
             
             end = time.time()
-            print(f"[{generation + 1}/{max_iter}] Iterations --> Best Fitness: {current_best_fitness.item():.2f}, Melhor Fitness Geral: {best_fitness_overall.item():.2f} ({end-start_generation:.2f} s | tempo total: {(time.time()-start)/3600:.2f} h) ------ Média Loudness: {np.mean(self.A)}")
+            print(f"[{generation + 1}/{max_iter}] Iterations --> Best Fitness: {current_best_fitness.item():.2f}, Melhor Fitness Geral: {best_fitness_overall.item():.2f} ({end-start_generation:.2f} s | tempo total: {(time.time()-start)/3600:.2f} h)")
+            # print(f"Mean Loudness: {np.mean(self.A):.4f} | Mean frequencia: {np.mean(self.frequencies):.4f} | Mean velocidade: {np.mean(self.velocities):.4f}")
             
             # Verificando se chegou ao limite de tempo do algoritmo
             if time.time() - start > max_time:
