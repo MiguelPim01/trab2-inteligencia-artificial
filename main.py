@@ -87,6 +87,7 @@ def plot_scores_curve(best_scores : list):
     plt.title("Melhores Pontuações dos Agentes vs Iterações do Algoritmo")
     
     plt.savefig(os.path.join("figs", "scores_curve.png"), format="png")
+    plt.close()
 
 def parse_args():
     parser = ArgumentParser()

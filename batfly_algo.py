@@ -14,18 +14,18 @@ class BatFlyAlgorithm:
         self.bats = np.zeros((self.population_size, self.d)) # Criando população de morcegos (100, 1475)
         self.v = np.zeros((self.population_size, self.d)) # Inicialização das velocidades dos morcegos (100, 1475)
         
-        self.best_solution = self.solutions[0] # Inicializando a melhor solução
+        self.best_solution = self.solutions[0].copy() # Inicializando a melhor solução
         
         self.f_min = 0.0 # Frequência mínima dos morcegos
         self.f_max = 3.0 # Frequência máxima dos morcegos
-        self.freq = np.random.uniform(self.f_min, self.f_max, self.d) # Inicialização da frequência de cada morcego
+        self.freq = np.random.uniform(self.f_min, self.f_max, self.population_size) # Inicialização da frequência de cada morcego
         
         self.alpha = 0.9 # Fator de decremento da loudness
         self.gamma = 0.9 # Fator de incremento do pulse rate
         
         self.r_max = 1 # Pulse rate máximo
-        self.r = np.random.uniform(0, self.r_max/4, self.d) # Inicialização do vetor de pulse rates
-        self.A = np.random.uniform(1, 2, self.d) # Inicialização do vetor de loudness
+        self.r = np.random.uniform(0, self.r_max/4, self.population_size) # Inicialização do vetor de pulse rates
+        self.A = np.random.uniform(1, 2, self.population_size) # Inicialização do vetor de loudness
     
     def get_best_solution(self, objective_function, parallel : bool = True) -> float:
         if parallel:
@@ -40,24 +40,21 @@ class BatFlyAlgorithm:
         return scores[best_indx]
     
     def search_solutions(self, objective_function, iteration : int):
-        # Atualizando as frequências dos morcegos
-        self.freq = np.random.uniform(self.f_min, self.f_max, self.d)
-        
         for i in range(self.population_size):
-            
             if np.random.uniform(0, 1) < self.r[i]:
                 # Gera uma solução próxima a melhor solução
                 epsilon = np.random.uniform(-1, 1, self.d)
                 self.bats[i] = self.best_solution + np.mean(self.A) * epsilon
             else:
                 # Voa com o morcego
+                self.freq[i] = self.f_min + (self.f_max - self.f_min) * np.random.uniform(0, 1)
                 self.v[i] = self.v[i] + (self.solutions[i] - self.best_solution) * self.freq[i]
                 self.bats[i] = self.solutions[i] + self.v[i]
             
             if objective_function(self.bats[i]) > objective_function(self.solutions[i]):
                 if np.random.uniform(0, 1) < self.A[i]:
                     # Solução aceita
-                    self.solutions[i] = self.bats[i]
+                    self.solutions[i] = self.bats[i].copy()
                     self.A[i] *= self.alpha
                     self.r[i] = self.r_max * (1 - np.exp(-self.gamma * iteration))
                     
