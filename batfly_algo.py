@@ -10,7 +10,7 @@ class BatFlyAlgorithm:
         self.population_size = population_size # Quantidade de morcegos
         self.d = d # Tamanho do array de pesos
         
-        self.solutions = np.random.uniform(-1, 1, size=(population_size, d)) # Criando vetor de soluções (100, 1475)
+        self.solutions = np.random.uniform(-2, 2, size=(population_size, d)) # Criando vetor de soluções (100, 1475)
         self.bats = np.zeros((self.population_size, self.d)) # Criando população de morcegos (100, 1475)
         self.v = np.zeros((self.population_size, self.d)) # Inicialização das velocidades dos morcegos (100, 1475)
         
@@ -26,20 +26,29 @@ class BatFlyAlgorithm:
         self.r_max = 1 # Pulse rate máximo
         self.r = np.random.uniform(0, self.r_max/4, self.population_size) # Inicialização do vetor de pulse rates
         self.A = np.random.uniform(1, 2, self.population_size) # Inicialização do vetor de loudness
+        
+        self._fitness_cache = None # Cache para guardar os scores das soluções
     
     def get_best_solution(self, objective_function, parallel : bool = True) -> float:
         if parallel:
             scores = np.array(objective_function(self.solutions))
         else:
             scores = np.array([objective_function(weights) for weights in self.solutions])
-        
+        self._fitness_cache = scores
         
         best_indx = np.argmax(scores)
-        self.best_solution = self.solutions[best_indx]
+        self.best_solution = self.solutions[best_indx].copy()
         
         return scores[best_indx]
     
     def search_solutions(self, objective_function, iteration : int):
+        # Preenchendo vetor de fitness cache apenas na primeira iteração
+        if self._fitness_cache is None:
+            self._fitness_cache = np.array(objective_function(self.solutions))
+        
+        # Atualiza as frequências
+        self.freq = np.random.uniform(self.f_min, self.f_max, self.population_size)
+        
         for i in range(self.population_size):
             if np.random.uniform(0, 1) < self.r[i]:
                 # Gera uma solução próxima a melhor solução
@@ -47,14 +56,20 @@ class BatFlyAlgorithm:
                 self.bats[i] = self.best_solution + np.mean(self.A) * epsilon
             else:
                 # Voa com o morcego
-                self.freq[i] = self.f_min + (self.f_max - self.f_min) * np.random.uniform(0, 1)
                 self.v[i] = self.v[i] + (self.solutions[i] - self.best_solution) * self.freq[i]
                 self.bats[i] = self.solutions[i] + self.v[i]
             
-            if objective_function(self.bats[i]) > objective_function(self.solutions[i]):
+            # Obtendo scores para comparar
+            bat_score = float(objective_function(self.bats[i]))
+            cur_score = float(self._fitness_cache[i])
+            
+            if bat_score > cur_score:
                 if np.random.uniform(0, 1) < self.A[i]:
                     # Solução aceita
                     self.solutions[i] = self.bats[i].copy()
+                    self._fitness_cache[i] = bat_score
+                    
+                    # Atualizando loudness e pulse rate
                     self.A[i] *= self.alpha
                     self.r[i] = self.r_max * (1 - np.exp(-self.gamma * iteration))
                     

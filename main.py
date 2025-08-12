@@ -67,7 +67,7 @@ def game_fitness_function(population : np.ndarray) -> np.ndarray:
         for i, player in enumerate(game.players):
             total_scores[i] += player.score
     
-    avg_scores = total_scores/3
+    avg_scores = total_scores/NUM_GAMES
     
     return avg_scores
 
