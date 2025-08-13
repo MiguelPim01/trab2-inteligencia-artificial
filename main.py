@@ -120,6 +120,8 @@ def main():
         
         np.save("best_scores_per_iter.npy", np.array(scores_history))
         print("Histórico de melhores scores salvos em \'best_scores_per_iter.npy\'")
+    else:
+        print("Para realizar o treinamento rode: \'python main.py -tn\'")
     
     # Testando o agente
     best_weights = np.load("best_weights.npy")
