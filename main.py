@@ -12,17 +12,20 @@ from argparse import ArgumentParser
 import matplotlib.pyplot as plt
 
 NUM_GAMES = 3             # Quantidade de vezes que cada agente irá jogar o jogo
-MAX_ITER         = 1000          # Máximo de iterações do algoritmo
-FPS              = 1000          # Quantidade de fps do jogo
-RENDER           = False
+MAX_ITER         = 1000   # Máximo de iterações do algoritmo
+FPS              = 1000   # Quantidade de fps do jogo
+RENDER           = False  # Renderiza ou não o jogo
 
+# Definindo quantidade de morcegos
 POPULATION_SIZE = 100
 
+# Definindo tamanhos dos layers da rede neural
 INPUT_SIZE = 27
 HIDDEN1_SIZE = 32
 HIDDEN2_SIZE = 16
 OUTPUT_SIZE = 3
 
+# Quantidade de arestas da rede neural
 DIMESION = INPUT_SIZE*HIDDEN1_SIZE + HIDDEN1_SIZE + HIDDEN1_SIZE*HIDDEN2_SIZE + HIDDEN2_SIZE + HIDDEN2_SIZE*OUTPUT_SIZE + OUTPUT_SIZE  # = 1475
 
 def game_fitness_function(population : np.ndarray) -> np.ndarray:
@@ -101,27 +104,25 @@ def parse_args():
     return parser.parse_args()
 
 def main():
-    args = parse_args()
+    print("\n--- Iniciando Treinamento com Voo dos Morcegos ---")
     
-    if args.train_network:
-        print("\n--- Iniciando Treinamento com Voo dos Morcegos ---")
-        
-        bat_algorithm = BatFlyAlgorithm(
-            population_size=POPULATION_SIZE,
-            d=DIMESION
-        )
-        
-        best_weights, scores_history = bat_algorithm.execute_algorithm(objective_function=game_fitness_function, total_iterations=MAX_ITER)
-        
-        print("--- Treinamento finalizado ---")
-        
-        np.save("best_weights.npy", best_weights)
-        print("Melhores pesos salvos em \'best_weights.npy\'")
-        
-        np.save("best_scores_per_iter.npy", np.array(scores_history))
-        print("Histórico de melhores scores salvos em \'best_scores_per_iter.npy\'")
-    else:
-        print("Para realizar o treinamento rode: \'python main.py -tn\'")
+    # Inicializa o algoritmo do voo dos morcegos
+    bat_algorithm = BatFlyAlgorithm(
+        population_size=POPULATION_SIZE,
+        d=DIMESION
+    )
+    
+    # Executa o algoritmo e obtem os melhores pesos da rede assim como os melhores scores de cada iteração
+    best_weights, scores_history = bat_algorithm.execute_algorithm(objective_function=game_fitness_function, total_iterations=MAX_ITER)
+    
+    print("--- Treinamento finalizado ---")
+    
+    # Salva os pesos e os scores
+    np.save("best_weights.npy", best_weights)
+    print("Melhores pesos salvos em \'best_weights.npy\'")
+    
+    np.save("best_scores_per_iter.npy", np.array(scores_history))
+    print("Histórico de melhores scores salvos em \'best_scores_per_iter.npy\'")
     
     # Testando o agente
     best_weights = np.load("best_weights.npy")

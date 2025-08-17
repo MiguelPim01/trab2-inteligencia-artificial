@@ -7,6 +7,12 @@ class BatFlyAlgorithm:
     """
     
     def __init__(self, population_size: int, d: int):
+        """Inicializa o algoritmo de voo dos morcegos.
+
+        Args:
+            population_size (int): Tamanho da população de morcegos.
+            d (int): Dimensões dos atributos dos morcegos.
+        """
         self.population_size = population_size # Quantidade de morcegos
         self.d = d # Tamanho do array de pesos
         
@@ -30,6 +36,15 @@ class BatFlyAlgorithm:
         self._fitness_cache = None # Cache para guardar os scores das soluções
     
     def get_best_solution(self, objective_function, parallel : bool = True) -> float:
+        """Obtém os scores de cada um dos morcegos no jogo e seleciona o melhor.
+
+        Args:
+            objective_function (_type_): Função objetivo.
+            parallel (bool, optional): Defini se irá rodar o jogo em paralelo ou não. Defaults to True.
+
+        Returns:
+            float: Valor do melhor score obtido nessa rodada.
+        """
         if parallel:
             scores = np.array(objective_function(self.solutions))
         else:
@@ -42,6 +57,12 @@ class BatFlyAlgorithm:
         return scores[best_indx]
     
     def search_solutions(self, objective_function, iteration : int):
+        """Realiza a busca por mais soluções voando com os morcegos ou gerando soluções locais próximas a melhor solução da rodada anterior.
+
+        Args:
+            objective_function (_type_): Função objetivo.
+            iteration (int): Iteração atual do algoritmo.
+        """
         # Preenchendo vetor de fitness cache apenas na primeira iteração
         if self._fitness_cache is None:
             self._fitness_cache = np.array(objective_function(self.solutions))
@@ -74,6 +95,16 @@ class BatFlyAlgorithm:
                     self.r[i] = self.r_max * (1 - np.exp(-self.gamma * iteration))
                     
     def execute_algorithm(self, objective_function, total_iterations: int):
+        """Executa o algoritmo de voo dos morcegos e retorna a melhor solução e o histórico de melhores scores.
+
+        Args:
+            objective_function (_type_): Função objetivo.
+            total_iterations (int): Número máximo de iterações do algoritmo.
+
+        Returns:
+            best_weights (ndarray): Melhores pesos encontrados pelo algoritmo.
+            history (list): Histórico de melhores scores por iteração do algoritmo.
+        """
         # Iniciando cronômetro do algoritmo
         t_start = time.time()
         MAX_ELAPSED_TIME = 12*60*60
